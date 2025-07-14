@@ -1,0 +1,31 @@
+{
+  "name": "queue_pipe_sys",
+  "version": "1.0.0", 
+  "description": "使用 VibeCoding 開發的專案",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "echo \"請使用 @vibe test 執行測試\" && exit 1",
+    "build": "echo \"請使用 @vibe code 生成代碼\" && exit 1",
+    "deploy": "echo \"請使用 @vibe deploy 部署應用\" && exit 1"
+  },
+  "keywords": [
+    "vibecoding",
+    "ai-driven-development",
+    "conversation-driven",
+    "mvp",
+    "poc"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {},
+  "vibecoding": {
+    "version": "3.0.0",
+    "created": "2025-07-01T05:09:55.671Z",
+    "structure": "enhanced-complete",
+    "prompts-compliant": true
+  }
+}

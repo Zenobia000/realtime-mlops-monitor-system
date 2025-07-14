@@ -1,0 +1,956 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "🎯 Model API 性能監控中心",
+    "tags": ["model-api", "monitoring", "performance"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "📈 總 QPS",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "SELECT time_bucket_gapfill('1m', timestamp) as time, AVG(qps) as value FROM metrics_aggregated WHERE metric_type = 'overall' AND timestamp >= $__timeFrom() AND timestamp <= $__timeTo() GROUP BY time ORDER BY time",
+            "refId": "A",
+            "format": "time_series"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 80},
+                {"color": "red", "value": 100}
+              ]
+            },
+            "unit": "reqps",
+            "decimals": 2
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto"
+        },
+        "pluginVersion": "8.0.0",
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "⏱️ 平均延遲",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "SELECT time_bucket_gapfill('1m', timestamp) as time, AVG(avg_response_time) as value FROM metrics_aggregated WHERE metric_type = 'overall' AND timestamp >= $__timeFrom() AND timestamp <= $__timeTo() GROUP BY time ORDER BY time",
+            "refId": "A",
+            "format": "time_series"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 50},
+                {"color": "red", "value": 100}
+              ]
+            },
+            "unit": "ms",
+            "decimals": 1
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto"
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "🚨 錯誤率",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "SELECT time_bucket_gapfill('1m', timestamp) as time, AVG(error_rate) as value FROM metrics_aggregated WHERE metric_type = 'overall' AND timestamp >= $__timeFrom() AND timestamp <= $__timeTo() GROUP BY time ORDER BY time",
+            "refId": "A",
+            "format": "time_series"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1},
+                {"color": "red", "value": 5}
+              ]
+            },
+            "unit": "percent",
+            "decimals": 2
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto"
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0}
+      },
+      {
+        "id": 4,
+        "title": "📊 總請求量",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "SELECT time_bucket_gapfill('1m', timestamp) as time, SUM(total_requests) as value FROM metrics_aggregated WHERE metric_type = 'overall' AND timestamp >= $__timeFrom() AND timestamp <= $__timeTo() GROUP BY time ORDER BY time",
+            "refId": "A",
+            "format": "time_series"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "short",
+            "decimals": 0
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto"
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0}
+      },
+      {
+        "id": 5,
+        "title": "📈 QPS & 請求量趨勢",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "SELECT time_bucket_gapfill('30s', timestamp) as time, AVG(qps) as qps FROM metrics_aggregated WHERE metric_type = 'overall' AND timestamp >= $__timeFrom() AND timestamp <= $__timeTo() GROUP BY time ORDER BY time",
+            "refId": "A",
+            "format": "time_series",
+            "legendFormat": "QPS"
+          },
+          {
+            "expr": "SELECT time_bucket_gapfill('30s', timestamp) as time, SUM(total_requests) as requests FROM metrics_aggregated WHERE metric_type = 'overall' AND timestamp >= $__timeFrom() AND timestamp <= $__timeTo() GROUP BY time ORDER BY time",
+            "refId": "B",
+            "format": "time_series",
+            "legendFormat": "請求量"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "linear",
+              "barAlignment": 0,
+              "lineWidth": 1,
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "spanNulls": false,
+              "insertNulls": false,
+              "showPoints": "never",
+              "pointSize": 5,
+              "stacking": {
+                "mode": "none",
+                "group": "A"
+              },
+              "axisPlacement": "auto",
+              "axisLabel": "",
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "reqps",
+            "decimals": 2
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "請求量"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "short"
+                },
+                {
+                  "id": "custom.axisPlacement",
+                  "value": "right"
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          },
+          "legend": {
+            "displayMode": "visible",
+            "placement": "bottom"
+          }
+        },
+        "gridPos": {"h": 9, "w": 24, "x": 0, "y": 8}
+      },
+      {
+        "id": 6,
+        "title": "⏱️ 響應時間分位數分析",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "SELECT time_bucket_gapfill('30s', timestamp) as time, AVG(avg_response_time) as avg_time FROM metrics_aggregated WHERE metric_type = 'overall' AND timestamp >= $__timeFrom() AND timestamp <= $__timeTo() GROUP BY time ORDER BY time",
+            "refId": "A",
+            "format": "time_series",
+            "legendFormat": "平均響應時間"
+          },
+          {
+            "expr": "SELECT time_bucket_gapfill('30s', timestamp) as time, AVG(p95_response_time) as p95_time FROM metrics_aggregated WHERE metric_type = 'overall' AND timestamp >= $__timeFrom() AND timestamp <= $__timeTo() GROUP BY time ORDER BY time",
+            "refId": "B",
+            "format": "time_series",
+            "legendFormat": "P95 響應時間"
+          },
+          {
+            "expr": "SELECT time_bucket_gapfill('30s', timestamp) as time, AVG(p99_response_time) as p99_time FROM metrics_aggregated WHERE metric_type = 'overall' AND timestamp >= $__timeFrom() AND timestamp <= $__timeTo() GROUP BY time ORDER BY time",
+            "refId": "C",
+            "format": "time_series",
+            "legendFormat": "P99 響應時間"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "linear",
+              "barAlignment": 0,
+              "lineWidth": 2,
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "spanNulls": false,
+              "insertNulls": false,
+              "showPoints": "never",
+              "pointSize": 5,
+              "stacking": {
+                "mode": "none",
+                "group": "A"
+              },
+              "axisPlacement": "auto",
+              "axisLabel": "",
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "red", "value": 80}
+              ]
+            },
+            "unit": "ms",
+            "decimals": 1
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          },
+          "legend": {
+            "displayMode": "visible",
+            "placement": "bottom"
+          }
+        },
+        "gridPos": {"h": 9, "w": 12, "x": 0, "y": 17}
+      },
+      {
+        "id": 7,
+        "title": "🚨 錯誤率 & 異常監控",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "SELECT time_bucket_gapfill('30s', timestamp) as time, service_name, AVG(error_rate) as error_rate FROM metrics_aggregated WHERE metric_type = 'service' AND service_name IS NOT NULL AND timestamp >= $__timeFrom() AND timestamp <= $__timeTo() GROUP BY time, service_name ORDER BY time",
+            "refId": "A",
+            "format": "time_series",
+            "legendFormat": "{{service_name}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "linear",
+              "barAlignment": 0,
+              "lineWidth": 2,
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "spanNulls": false,
+              "insertNulls": false,
+              "showPoints": "never",
+              "pointSize": 5,
+              "stacking": {
+                "mode": "none",
+                "group": "A"
+              },
+              "axisPlacement": "auto",
+              "axisLabel": "",
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              },
+              "thresholdsStyle": {
+                "mode": "line"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1},
+                {"color": "red", "value": 5}
+              ]
+            },
+            "unit": "percent",
+            "decimals": 2
+          }
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          },
+          "legend": {
+            "displayMode": "visible",
+            "placement": "bottom"
+          }
+        },
+        "gridPos": {"h": 9, "w": 12, "x": 12, "y": 17}
+      },
+      {
+        "id": 8,
+        "title": "🔥 服務性能熱圖",
+        "type": "heatmap",
+        "targets": [
+          {
+            "expr": "SELECT time_bucket_gapfill('5m', timestamp) as time, service_name, AVG(avg_response_time) as response_time FROM metrics_aggregated WHERE metric_type = 'service' AND service_name IS NOT NULL AND timestamp >= $__timeFrom() AND timestamp <= $__timeTo() GROUP BY time, service_name ORDER BY time",
+            "refId": "A",
+            "format": "time_series"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              },
+              "scaleDistribution": {
+                "type": "linear"
+              }
+            },
+            "color": {
+              "mode": "spectrum"
+            },
+            "unit": "ms"
+          }
+        },
+        "options": {
+          "calculate": false,
+          "calculation": {},
+          "cellGap": 2,
+          "cellValues": {},
+          "color": {
+            "exponent": 0.5,
+            "fill": "dark-orange",
+            "mode": "spectrum",
+            "reverse": false,
+            "scale": "exponential",
+            "scheme": "Oranges",
+            "steps": 64
+          },
+          "exemplars": {
+            "color": "rgba(255,0,255,0.7)"
+          },
+          "filterValues": {
+            "le": 1e-9
+          },
+          "legend": {
+            "show": true
+          },
+          "rowsFrame": {
+            "layout": "auto"
+          },
+          "tooltip": {
+            "show": true,
+            "yHistogram": false
+          },
+          "yAxis": {
+            "axisPlacement": "left",
+            "reverse": false,
+            "unit": "short"
+          }
+        },
+        "pluginVersion": "8.0.0",
+        "gridPos": {"h": 9, "w": 12, "x": 0, "y": 26}
+      },
+      {
+        "id": 9,
+        "title": "📋 Top 異常端點",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "SELECT service_name, endpoint, AVG(error_rate) as avg_error_rate, AVG(avg_response_time) as avg_response_time, SUM(total_requests) as total_requests, SUM(total_errors) as total_errors FROM metrics_aggregated WHERE metric_type = 'endpoint' AND timestamp >= $__timeFrom() AND timestamp <= $__timeTo() GROUP BY service_name, endpoint ORDER BY avg_error_rate DESC, avg_response_time DESC LIMIT 10",
+            "refId": "A",
+            "format": "table"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "red", "value": 80}
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "avg_error_rate"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "錯誤率"
+                },
+                {
+                  "id": "unit",
+                  "value": "percent"
+                },
+                {
+                  "id": "decimals",
+                  "value": 2
+                },
+                {
+                  "id": "custom.displayMode",
+                  "value": "color-background"
+                },
+                {
+                  "id": "thresholds",
+                  "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      {"color": "green", "value": null},
+                      {"color": "yellow", "value": 1},
+                      {"color": "red", "value": 5}
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "avg_response_time"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "平均響應時間"
+                },
+                {
+                  "id": "unit",
+                  "value": "ms"
+                },
+                {
+                  "id": "decimals",
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "service_name"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "服務名稱"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "endpoint"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "端點"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "total_requests"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "總請求數"
+                },
+                {
+                  "id": "unit",
+                  "value": "short"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "total_errors"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "總錯誤數"
+                },
+                {
+                  "id": "unit",
+                  "value": "short"
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "showHeader": true,
+          "sortBy": [
+            {
+              "desc": true,
+              "displayName": "錯誤率"
+            }
+          ]
+        },
+        "pluginVersion": "8.0.0",
+        "gridPos": {"h": 9, "w": 12, "x": 12, "y": 26}
+      },
+      {
+        "id": 10,
+        "title": "📊 服務對比分析矩陣",
+        "type": "barchart",
+        "targets": [
+          {
+            "expr": "SELECT service_name, AVG(qps) as avg_qps, AVG(avg_response_time) as avg_response_time, AVG(error_rate) as avg_error_rate FROM metrics_aggregated WHERE metric_type = 'service' AND service_name IS NOT NULL AND timestamp >= $__timeFrom() AND timestamp <= $__timeTo() GROUP BY service_name ORDER BY avg_qps DESC",
+            "refId": "A",
+            "format": "table"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              },
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "red", "value": 80}
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "avg_qps"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "平均 QPS"
+                },
+                {
+                  "id": "unit",
+                  "value": "reqps"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "avg_response_time"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "平均響應時間"
+                },
+                {
+                  "id": "unit",
+                  "value": "ms"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "avg_error_rate"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "平均錯誤率"
+                },
+                {
+                  "id": "unit",
+                  "value": "percent"
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "legend": {
+            "displayMode": "visible",
+            "placement": "bottom"
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "gridPos": {"h": 9, "w": 12, "x": 0, "y": 35}
+      },
+      {
+        "id": 11,
+        "title": "📈 端點性能排行",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "SELECT service_name, endpoint, AVG(qps) as avg_qps, AVG(avg_response_time) as avg_response_time, AVG(p95_response_time) as p95_response_time, SUM(total_requests) as total_requests FROM metrics_aggregated WHERE metric_type = 'endpoint' AND timestamp >= $__timeFrom() AND timestamp <= $__timeTo() GROUP BY service_name, endpoint ORDER BY avg_qps DESC LIMIT 20",
+            "refId": "A",
+            "format": "table"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "red", "value": 80}
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "avg_qps"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "QPS"
+                },
+                {
+                  "id": "unit",
+                  "value": "reqps"
+                },
+                {
+                  "id": "decimals",
+                  "value": 2
+                },
+                {
+                  "id": "custom.displayMode",
+                  "value": "gradient-gauge"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "avg_response_time"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "平均響應時間"
+                },
+                {
+                  "id": "unit",
+                  "value": "ms"
+                },
+                {
+                  "id": "decimals",
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "p95_response_time"
+              },
+              "properties": [
+                {
+                  "id": "displayName",
+                  "value": "P95 響應時間"
+                },
+                {
+                  "id": "unit",
+                  "value": "ms"
+                },
+                {
+                  "id": "decimals",
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "showHeader": true,
+          "sortBy": [
+            {
+              "desc": true,
+              "displayName": "QPS"
+            }
+          ]
+        },
+        "gridPos": {"h": 9, "w": 12, "x": 12, "y": 35}
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": [
+        "5s",
+        "10s",
+        "30s",
+        "1m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "2h",
+        "1d"
+      ],
+      "time_options": [
+        "5m",
+        "15m",
+        "1h",
+        "6h",
+        "12h",
+        "24h",
+        "2d",
+        "7d",
+        "30d"
+      ]
+    },
+    "templating": {
+      "list": [
+        {
+          "allValue": null,
+          "current": {
+            "selected": false,
+            "text": "All",
+            "value": "$__all"
+          },
+          "datasource": "TimescaleDB",
+          "definition": "SELECT DISTINCT service_name FROM metrics_aggregated WHERE service_name IS NOT NULL",
+          "hide": 0,
+          "includeAll": true,
+          "label": "服務",
+          "multi": true,
+          "name": "service",
+          "options": [],
+          "query": "SELECT DISTINCT service_name FROM metrics_aggregated WHERE service_name IS NOT NULL",
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "tagValuesQuery": "",
+          "tags": [],
+          "tagsQuery": "",
+          "type": "query",
+          "useTags": false
+        },
+        {
+          "allValue": null,
+          "current": {
+            "selected": false,
+            "text": "All",
+            "value": "$__all"
+          },
+          "datasource": "TimescaleDB",
+          "definition": "SELECT DISTINCT endpoint FROM metrics_aggregated WHERE endpoint IS NOT NULL",
+          "hide": 0,
+          "includeAll": true,
+          "label": "端點",
+          "multi": true,
+          "name": "endpoint",
+          "options": [],
+          "query": "SELECT DISTINCT endpoint FROM metrics_aggregated WHERE endpoint IS NOT NULL",
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "tagValuesQuery": "",
+          "tags": [],
+          "tagsQuery": "",
+          "type": "query",
+          "useTags": false
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": "-- Grafana --",
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
+        }
+      ]
+    },
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 1,
+    "links": []
+  }
+} 
