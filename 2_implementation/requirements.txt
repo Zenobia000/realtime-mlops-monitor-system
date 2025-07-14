@@ -1,0 +1,46 @@
+# FastAPI 後端核心套件
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# 資料庫相關
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+asyncpg==0.29.0
+alembic==1.12.1
+
+# Redis 客戶端
+redis==5.0.1
+
+# RabbitMQ 客戶端
+aio_pika==9.3.1
+
+# 數據驗證與序列化
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# WebSocket 支援
+websockets==12.0
+
+# HTTP 客戶端
+httpx==0.25.2
+aiohttp==3.9.1
+
+# 日誌與監控
+structlog==23.2.0
+prometheus-client==0.19.0
+
+# 工具套件
+python-dotenv==1.0.0
+typer==0.9.0
+rich==13.7.0
+
+# 測試套件
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-mock==3.12.0
+
+# 開發工具
+black==23.11.0
+flake8==6.1.0
+mypy==1.7.1 

@@ -1,0 +1,1485 @@
+openapi: 3.0.3
+info:
+  title: Model API 監控系統
+  description: |
+    Model API 即時監控系統提供完整的 API 監控、指標查詢、告警管理和實時數據推送功能。
+    
+    ## 主要功能
+    - 🏥 **系統健康監控** - 服務狀態檢查和依賴監控
+    - 📊 **指標查詢** - 實時和歷史指標數據查詢
+    - 🚨 **告警管理** - 智能告警規則和通知
+    - 📈 **儀表板數據** - 可視化數據支持
+    - ⚡ **實時推送** - WebSocket 實時數據流
+    
+    ## 認證方式
+    
+    支持兩種 API Key 認證方式：
+    
+    1. **Header 認證** (推薦)
+       ```
+       X-API-Key: your-api-key
+       ```
+    
+    2. **Bearer Token 認證**
+       ```
+       Authorization: Bearer your-api-key
+       ```
+       
+    ## 限制
+    - API 限制: 300 requests/minute
+    - WebSocket 連接: 5 concurrent connections
+    - 數據保留: 30 天
+  version: "1.0.0"
+  contact:
+    name: API 支援
+    email: support@monitor.example.com
+    url: https://docs.monitor.example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: https://monitor.example.com/terms
+
+servers:
+  - url: http://localhost:8001
+    description: 開發環境
+  - url: https://test-api.monitor.example.com
+    description: 測試環境
+  - url: https://api.monitor.example.com
+    description: 生產環境
+
+security:
+  - ApiKeyAuth: []
+  - BearerAuth: []
+
+paths:
+  /:
+    get:
+      summary: 服務根目錄
+      description: 獲取服務基本信息
+      operationId: getRoot
+      tags: ["系統"]
+      security: []
+      responses:
+        "200":
+          description: 服務基本信息
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceInfo"
+
+  /health:
+    get:
+      summary: 健康檢查
+      description: 檢查系統健康狀態和依賴服務
+      operationId: getHealth
+      tags: ["系統"]
+      security: []
+      responses:
+        "200":
+          description: 系統健康
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          description: 系統不健康
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /v1:
+    get:
+      summary: API 版本信息
+      description: 獲取 API v1 版本信息和可用端點
+      operationId: getApiInfo
+      tags: ["系統"]
+      security: []
+      responses:
+        "200":
+          description: API 版本信息
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiInfo"
+
+  /v1/metrics/summary:
+    get:
+      summary: 指標摘要
+      description: 獲取系統整體指標摘要
+      operationId: getMetricsSummary
+      tags: ["指標查詢"]
+      parameters:
+        - name: start_time
+          in: query
+          description: 開始時間 (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          description: 結束時間 (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+        - name: service_name
+          in: query
+          description: 篩選特定服務
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 指標摘要數據
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetricsSummaryResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
+
+  /v1/metrics/historical:
+    get:
+      summary: 歷史指標
+      description: 查詢歷史指標數據
+      operationId: getHistoricalMetrics
+      tags: ["指標查詢"]
+      parameters:
+        - name: start_time
+          in: query
+          description: 開始時間 (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          description: 結束時間 (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+        - name: service_name
+          in: query
+          description: 服務名稱
+          schema:
+            type: string
+        - name: endpoint
+          in: query
+          description: 端點路徑
+          schema:
+            type: string
+        - name: metric_type
+          in: query
+          description: 指標類型
+          schema:
+            type: string
+            enum: [overall, service, endpoint]
+            default: overall
+        - name: limit
+          in: query
+          description: 返回數量限制
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+        - name: offset
+          in: query
+          description: 偏移量
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: 歷史指標數據
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HistoricalMetricsResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /v1/metrics/real-time:
+    get:
+      summary: 實時指標
+      description: 獲取實時指標數據 (Redis 快取)
+      operationId: getRealTimeMetrics
+      tags: ["指標查詢"]
+      parameters:
+        - name: service_name
+          in: query
+          description: 篩選特定服務
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 實時指標數據
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RealTimeMetricsResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /v1/metrics/services:
+    get:
+      summary: 監控服務列表
+      description: 獲取所有被監控的服務列表及其統計
+      operationId: getMonitoredServices
+      tags: ["指標查詢"]
+      responses:
+        "200":
+          description: 監控服務列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MonitoredServicesResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /v1/metrics/services/{service_name}/endpoints:
+    get:
+      summary: 服務端點詳情
+      description: 獲取特定服務的端點詳細信息
+      operationId: getServiceEndpoints
+      tags: ["指標查詢"]
+      parameters:
+        - name: service_name
+          in: path
+          required: true
+          description: 服務名稱
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 服務端點詳情
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceEndpointsResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /v1/alerts/:
+    get:
+      summary: 告警列表
+      description: 獲取告警列表
+      operationId: getAlerts
+      tags: ["告警管理"]
+      parameters:
+        - name: status
+          in: query
+          description: 告警狀態
+          schema:
+            type: string
+            enum: [triggered, resolved, acknowledged]
+        - name: severity
+          in: query
+          description: 嚴重程度
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+        - name: service_name
+          in: query
+          description: 服務名稱
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: 返回數量
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+        - name: offset
+          in: query
+          description: 偏移量
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: 告警列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertsResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /v1/alerts/active:
+    get:
+      summary: 活躍告警
+      description: 獲取當前活躍告警
+      operationId: getActiveAlerts
+      tags: ["告警管理"]
+      responses:
+        "200":
+          description: 活躍告警列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActiveAlertsResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /v1/services/:
+    get:
+      summary: 服務概覽
+      description: 獲取所有服務的健康狀態和性能概覽
+      operationId: getServicesOverview
+      tags: ["服務監控"]
+      responses:
+        "200":
+          description: 服務概覽
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServicesOverviewResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /v1/dashboards/overview:
+    get:
+      summary: 儀表板概覽
+      description: 獲取儀表板總覽數據
+      operationId: getDashboardOverview
+      tags: ["儀表板"]
+      parameters:
+        - name: time_range
+          in: query
+          description: 時間範圍
+          schema:
+            type: string
+            enum: [1h, 6h, 24h, 7d, 30d]
+            default: 1h
+      responses:
+        "200":
+          description: 儀表板概覽數據
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardOverviewResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /v1/dashboards/metrics/timeseries:
+    get:
+      summary: 時間序列數據
+      description: 獲取指標的時間序列數據
+      operationId: getTimeSeriesData
+      tags: ["儀表板"]
+      parameters:
+        - name: metric
+          in: query
+          required: true
+          description: 指標類型
+          schema:
+            type: string
+            enum: [qps, error_rate, avg_response_time, p95_response_time, p99_response_time]
+        - name: service_name
+          in: query
+          description: 服務名稱
+          schema:
+            type: string
+        - name: hours
+          in: query
+          description: 時間範圍(小時)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 168
+            default: 24
+        - name: interval
+          in: query
+          description: 間隔(分鐘)
+          schema:
+            type: integer
+            enum: [1, 5, 15, 30, 60]
+            default: 60
+      responses:
+        "200":
+          description: 時間序列數據
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeSeriesResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /v1/dashboards/realtime:
+    get:
+      summary: 實時儀表板
+      description: 獲取實時儀表板數據
+      operationId: getRealtimeDashboard
+      tags: ["儀表板"]
+      responses:
+        "200":
+          description: 實時儀表板數據
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RealtimeDashboardResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API Key 認證
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Bearer Token 認證
+
+  schemas:
+    ServiceInfo:
+      type: object
+      required: [message, version, docs]
+      properties:
+        message:
+          type: string
+          example: "Model API 監控系統"
+        version:
+          type: string
+          example: "1.0.0"
+        docs:
+          type: string
+          example: "/docs"
+
+    HealthResponse:
+      type: object
+      required: [success, data, timestamp]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/HealthData"
+        timestamp:
+          type: string
+          format: date-time
+
+    HealthData:
+      type: object
+      required: [status, version, uptime_seconds, dependencies, environment]
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy, degraded]
+        version:
+          type: string
+          example: "1.0.0"
+        uptime_seconds:
+          type: integer
+          example: 86400
+        dependencies:
+          $ref: "#/components/schemas/Dependencies"
+        environment:
+          type: string
+          enum: [development, staging, production]
+
+    Dependencies:
+      type: object
+      properties:
+        postgresql:
+          type: string
+          enum: [healthy, unhealthy, unknown]
+        redis:
+          type: string
+          enum: [healthy, unhealthy, unknown]
+        rabbitmq:
+          type: string
+          enum: [healthy, unhealthy, unknown]
+
+    ApiInfo:
+      type: object
+      required: [version, endpoints, available_routes, websocket_endpoints]
+      properties:
+        version:
+          type: string
+          example: "v1"
+        endpoints:
+          type: object
+          additionalProperties:
+            type: string
+        available_routes:
+          type: array
+          items:
+            type: string
+        websocket_endpoints:
+          type: array
+          items:
+            type: string
+
+    MetricsSummaryResponse:
+      type: object
+      required: [success, data, timestamp]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/MetricsSummaryData"
+        timestamp:
+          type: string
+          format: date-time
+
+    MetricsSummaryData:
+      type: object
+      required: [summary, services, time_range]
+      properties:
+        summary:
+          $ref: "#/components/schemas/MetricsSummary"
+        services:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceMetrics"
+        time_range:
+          $ref: "#/components/schemas/TimeRange"
+
+    MetricsSummary:
+      type: object
+      required: [total_services, total_endpoints, total_requests, average_qps, average_error_rate, average_response_time]
+      properties:
+        total_services:
+          type: integer
+          example: 5
+        total_endpoints:
+          type: integer
+          example: 20
+        total_requests:
+          type: integer
+          example: 15000
+        average_qps:
+          type: number
+          format: float
+          example: 4.2
+        average_error_rate:
+          type: number
+          format: float
+          example: 0.5
+        average_response_time:
+          type: number
+          format: float
+          example: 145.2
+
+    ServiceMetrics:
+      type: object
+      required: [service_name, qps, error_rate, avg_response_time, status]
+      properties:
+        service_name:
+          type: string
+          example: "model-api-v1"
+        qps:
+          type: number
+          format: float
+          example: 2.5
+        error_rate:
+          type: number
+          format: float
+          example: 0.2
+        avg_response_time:
+          type: number
+          format: float
+          example: 120.5
+        p95_response_time:
+          type: number
+          format: float
+          example: 180.2
+        p99_response_time:
+          type: number
+          format: float
+          example: 250.8
+        total_requests:
+          type: integer
+          example: 1500
+        total_errors:
+          type: integer
+          example: 3
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy, unknown]
+
+    TimeRange:
+      type: object
+      required: [start_time, end_time, duration_seconds]
+      properties:
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        duration_seconds:
+          type: integer
+          example: 3600
+
+    HistoricalMetricsResponse:
+      type: object
+      required: [success, data, timestamp]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/HistoricalMetricsData"
+        timestamp:
+          type: string
+          format: date-time
+
+    HistoricalMetricsData:
+      type: object
+      required: [metrics, pagination, filters]
+      properties:
+        metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/HistoricalMetric"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        filters:
+          $ref: "#/components/schemas/MetricsFilters"
+
+    HistoricalMetric:
+      type: object
+      required: [timestamp, qps, error_rate, avg_response_time, p95_response_time, p99_response_time, total_requests, total_errors]
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        service_name:
+          type: string
+          nullable: true
+        endpoint:
+          type: string
+          nullable: true
+        qps:
+          type: number
+          format: float
+        error_rate:
+          type: number
+          format: float
+        avg_response_time:
+          type: number
+          format: float
+        p95_response_time:
+          type: number
+          format: float
+        p99_response_time:
+          type: number
+          format: float
+        total_requests:
+          type: integer
+        total_errors:
+          type: integer
+
+    Pagination:
+      type: object
+      required: [total, limit, offset, has_more]
+      properties:
+        total:
+          type: integer
+          example: 1500
+        limit:
+          type: integer
+          example: 100
+        offset:
+          type: integer
+          example: 0
+        has_more:
+          type: boolean
+          example: true
+
+    MetricsFilters:
+      type: object
+      properties:
+        service_name:
+          type: string
+          nullable: true
+        endpoint:
+          type: string
+          nullable: true
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+
+    RealTimeMetricsResponse:
+      type: object
+      required: [success, data, timestamp]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/RealTimeMetricsData"
+        timestamp:
+          type: string
+          format: date-time
+
+    RealTimeMetricsData:
+      type: object
+      required: [real_time_metrics, service_summary, total_services, total_metrics, cache_ttl_seconds]
+      properties:
+        real_time_metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/RealTimeMetric"
+        service_summary:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceSummary"
+        total_services:
+          type: integer
+        total_metrics:
+          type: integer
+        cache_ttl_seconds:
+          type: integer
+          example: 300
+
+    RealTimeMetric:
+      type: object
+      required: [service_name, qps, error_rate, avg_response_time, p95_response_time, p99_response_time, last_updated]
+      properties:
+        service_name:
+          type: string
+        qps:
+          type: number
+          format: float
+        error_rate:
+          type: number
+          format: float
+        avg_response_time:
+          type: number
+          format: float
+        p95_response_time:
+          type: number
+          format: float
+        p99_response_time:
+          type: number
+          format: float
+        last_updated:
+          type: string
+          format: date-time
+
+    ServiceSummary:
+      type: object
+      required: [service_name, status, qps, error_rate]
+      properties:
+        service_name:
+          type: string
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy, unknown]
+        qps:
+          type: number
+          format: float
+        error_rate:
+          type: number
+          format: float
+
+    ErrorResponse:
+      type: object
+      required: [success, error, timestamp]
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          $ref: "#/components/schemas/ErrorDetail"
+        timestamp:
+          type: string
+          format: date-time
+
+    ErrorDetail:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: "INVALID_API_KEY"
+        message:
+          type: string
+          example: "無效的 API Key"
+        developer_message:
+          type: string
+          example: "請檢查您的 API Key 是否正確"
+
+    MonitoredServicesResponse:
+      type: object
+      required: [success, data, timestamp]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/MonitoredServicesData"
+        timestamp:
+          type: string
+          format: date-time
+
+    MonitoredServicesData:
+      type: object
+      required: [services, total_count]
+      properties:
+        services:
+          type: array
+          items:
+            $ref: "#/components/schemas/MonitoredService"
+        total_count:
+          type: integer
+
+    MonitoredService:
+      type: object
+      required: [service_name, endpoint_count, metric_count, avg_qps, avg_error_rate, avg_response_time, last_seen, status]
+      properties:
+        service_name:
+          type: string
+        endpoint_count:
+          type: integer
+        metric_count:
+          type: integer
+        avg_qps:
+          type: number
+          format: float
+        avg_error_rate:
+          type: number
+          format: float
+        avg_response_time:
+          type: number
+          format: float
+        last_seen:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [active, inactive, unknown]
+
+    ServiceEndpointsResponse:
+      type: object
+      required: [success, data, timestamp]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/ServiceEndpointsData"
+        timestamp:
+          type: string
+          format: date-time
+
+    ServiceEndpointsData:
+      type: object
+      required: [service_name, endpoints, summary]
+      properties:
+        service_name:
+          type: string
+        endpoints:
+          type: array
+          items:
+            $ref: "#/components/schemas/EndpointMetrics"
+        summary:
+          $ref: "#/components/schemas/EndpointsSummary"
+
+    EndpointMetrics:
+      type: object
+      required: [endpoint, method, qps, error_rate, avg_response_time, p95_response_time, total_requests, last_seen]
+      properties:
+        endpoint:
+          type: string
+        method:
+          type: string
+          enum: [GET, POST, PUT, DELETE, PATCH]
+        qps:
+          type: number
+          format: float
+        error_rate:
+          type: number
+          format: float
+        avg_response_time:
+          type: number
+          format: float
+        p95_response_time:
+          type: number
+          format: float
+        total_requests:
+          type: integer
+        last_seen:
+          type: string
+          format: date-time
+
+    EndpointsSummary:
+      type: object
+      required: [total_endpoints, total_requests, avg_qps, avg_error_rate]
+      properties:
+        total_endpoints:
+          type: integer
+        total_requests:
+          type: integer
+        avg_qps:
+          type: number
+          format: float
+        avg_error_rate:
+          type: number
+          format: float
+
+    AlertsResponse:
+      type: object
+      required: [success, data, timestamp]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/AlertsData"
+        timestamp:
+          type: string
+          format: date-time
+
+    AlertsData:
+      type: object
+      required: [alerts, pagination]
+      properties:
+        alerts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Alert"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    Alert:
+      type: object
+      required: [id, rule_name, severity, status, message, metric_value, threshold, triggered_at]
+      properties:
+        id:
+          type: string
+          example: "alert_123456"
+        rule_name:
+          type: string
+          example: "高錯誤率告警"
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        status:
+          type: string
+          enum: [triggered, resolved, acknowledged]
+        message:
+          type: string
+          example: "服務 model-api-v1 錯誤率 = 5.2% > 5%"
+        service_name:
+          type: string
+          nullable: true
+        endpoint:
+          type: string
+          nullable: true
+        metric_value:
+          type: number
+          format: float
+        threshold:
+          type: number
+          format: float
+        triggered_at:
+          type: string
+          format: date-time
+        acknowledged_at:
+          type: string
+          format: date-time
+          nullable: true
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    ActiveAlertsResponse:
+      type: object
+      required: [success, data, timestamp]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/ActiveAlertsData"
+        timestamp:
+          type: string
+          format: date-time
+
+    ActiveAlertsData:
+      type: object
+      required: [active_alerts, total_active, by_severity]
+      properties:
+        active_alerts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActiveAlert"
+        total_active:
+          type: integer
+        by_severity:
+          $ref: "#/components/schemas/AlertSeverityCount"
+
+    ActiveAlert:
+      type: object
+      required: [id, rule_name, severity, service_name, message, triggered_at, duration_minutes]
+      properties:
+        id:
+          type: string
+        rule_name:
+          type: string
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        service_name:
+          type: string
+          nullable: true
+        message:
+          type: string
+        triggered_at:
+          type: string
+          format: date-time
+        duration_minutes:
+          type: integer
+
+    AlertSeverityCount:
+      type: object
+      required: [critical, high, medium, low]
+      properties:
+        critical:
+          type: integer
+        high:
+          type: integer
+        medium:
+          type: integer
+        low:
+          type: integer
+
+    ServicesOverviewResponse:
+      type: object
+      required: [success, data, timestamp]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/ServicesOverviewData"
+        timestamp:
+          type: string
+          format: date-time
+
+    ServicesOverviewData:
+      type: object
+      required: [services, total_count, health_summary]
+      properties:
+        services:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceOverview"
+        total_count:
+          type: integer
+        health_summary:
+          $ref: "#/components/schemas/HealthSummary"
+
+    ServiceOverview:
+      type: object
+      required: [service_name, status, last_seen, endpoint_count, avg_qps, avg_error_rate, avg_response_time, health_score]
+      properties:
+        service_name:
+          type: string
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy, unknown]
+        last_seen:
+          type: string
+          format: date-time
+        endpoint_count:
+          type: integer
+        avg_qps:
+          type: number
+          format: float
+        avg_error_rate:
+          type: number
+          format: float
+        avg_response_time:
+          type: number
+          format: float
+        health_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+
+    HealthSummary:
+      type: object
+      required: [healthy, degraded, unhealthy, unknown]
+      properties:
+        healthy:
+          type: integer
+        degraded:
+          type: integer
+        unhealthy:
+          type: integer
+        unknown:
+          type: integer
+
+    DashboardOverviewResponse:
+      type: object
+      required: [success, data, timestamp]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/DashboardOverviewData"
+        timestamp:
+          type: string
+          format: date-time
+
+    DashboardOverviewData:
+      type: object
+      required: [system_overview, service_health, alerts_summary, top_services]
+      properties:
+        system_overview:
+          $ref: "#/components/schemas/SystemOverview"
+        service_health:
+          $ref: "#/components/schemas/ServiceHealthOverview"
+        alerts_summary:
+          $ref: "#/components/schemas/AlertsSummaryOverview"
+        top_services:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopService"
+
+    SystemOverview:
+      type: object
+      required: [total_services, total_endpoints, total_requests, total_errors, avg_qps, avg_error_rate, avg_response_time]
+      properties:
+        total_services:
+          type: integer
+        total_endpoints:
+          type: integer
+        total_requests:
+          type: integer
+        total_errors:
+          type: integer
+        avg_qps:
+          type: number
+          format: float
+        avg_error_rate:
+          type: number
+          format: float
+        avg_response_time:
+          type: number
+          format: float
+
+    ServiceHealthOverview:
+      type: object
+      required: [healthy, degraded, unhealthy, unknown, total, health_percentage]
+      properties:
+        healthy:
+          type: integer
+        degraded:
+          type: integer
+        unhealthy:
+          type: integer
+        unknown:
+          type: integer
+        total:
+          type: integer
+        health_percentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+
+    AlertsSummaryOverview:
+      type: object
+      required: [total_active, critical, high, medium, low]
+      properties:
+        total_active:
+          type: integer
+        critical:
+          type: integer
+        high:
+          type: integer
+        medium:
+          type: integer
+        low:
+          type: integer
+
+    TopService:
+      type: object
+      required: [service_name, qps, error_rate, avg_response_time]
+      properties:
+        service_name:
+          type: string
+        qps:
+          type: number
+          format: float
+        error_rate:
+          type: number
+          format: float
+        avg_response_time:
+          type: number
+          format: float
+
+    TimeSeriesResponse:
+      type: object
+      required: [success, data, timestamp]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/TimeSeriesData"
+        timestamp:
+          type: string
+          format: date-time
+
+    TimeSeriesData:
+      type: object
+      required: [metric, time_range, timeseries, statistics]
+      properties:
+        metric:
+          type: string
+          enum: [qps, error_rate, avg_response_time, p95_response_time, p99_response_time]
+        service_name:
+          type: string
+          nullable: true
+        time_range:
+          $ref: "#/components/schemas/TimeSeriesRange"
+        timeseries:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeSeriesPoint"
+        statistics:
+          $ref: "#/components/schemas/TimeSeriesStatistics"
+
+    TimeSeriesRange:
+      type: object
+      required: [start_time, end_time, hours, interval_minutes]
+      properties:
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        hours:
+          type: integer
+        interval_minutes:
+          type: integer
+
+    TimeSeriesPoint:
+      type: object
+      required: [timestamp, value]
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        value:
+          type: number
+          format: float
+
+    TimeSeriesStatistics:
+      type: object
+      required: [min, max, avg, data_points]
+      properties:
+        min:
+          type: number
+          format: float
+        max:
+          type: number
+          format: float
+        avg:
+          type: number
+          format: float
+        data_points:
+          type: integer
+
+    RealtimeDashboardResponse:
+      type: object
+      required: [success, data, timestamp]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/RealtimeDashboardData"
+        timestamp:
+          type: string
+          format: date-time
+
+    RealtimeDashboardData:
+      type: object
+      required: [real_time_metrics, services_status, alerts_summary, last_updated]
+      properties:
+        real_time_metrics:
+          $ref: "#/components/schemas/RealtimeMetricsOverview"
+        services_status:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceStatus"
+        alerts_summary:
+          $ref: "#/components/schemas/AlertsSummaryOverview"
+        last_updated:
+          type: string
+          format: date-time
+
+    RealtimeMetricsOverview:
+      type: object
+      required: [total_qps, overall_error_rate, avg_response_time, total_services]
+      properties:
+        total_qps:
+          type: number
+          format: float
+        overall_error_rate:
+          type: number
+          format: float
+        avg_response_time:
+          type: number
+          format: float
+        total_services:
+          type: integer
+
+    ServiceStatus:
+      type: object
+      required: [service_name, status, qps, error_rate]
+      properties:
+        service_name:
+          type: string
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy, unknown]
+        qps:
+          type: number
+          format: float
+        error_rate:
+          type: number
+          format: float
+
+  responses:
+    BadRequestError:
+      description: 請求參數無效
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            error:
+              code: "INVALID_PARAMETERS"
+              message: "請求參數無效"
+              developer_message: "請檢查參數格式和必需欄位"
+            timestamp: "2025-07-01T10:30:00Z"
+
+    UnauthorizedError:
+      description: 認證失敗
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            error:
+              code: "INVALID_API_KEY"
+              message: "無效的 API Key"
+              developer_message: "請檢查您的 API Key 是否正確"
+            timestamp: "2025-07-01T10:30:00Z"
+
+    ForbiddenError:
+      description: 權限不足
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            error:
+              code: "INSUFFICIENT_PERMISSIONS"
+              message: "權限不足"
+              developer_message: "當前 API Key 沒有訪問此資源的權限"
+            timestamp: "2025-07-01T10:30:00Z"
+
+    NotFoundError:
+      description: 資源不存在
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            error:
+              code: "RESOURCE_NOT_FOUND"
+              message: "資源不存在"
+              developer_message: "請檢查請求的資源路徑是否正確"
+            timestamp: "2025-07-01T10:30:00Z"
+
+    RateLimitError:
+      description: 請求頻率超過限制
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            error:
+              code: "RATE_LIMIT_EXCEEDED"
+              message: "請求頻率超過限制"
+              developer_message: "每分鐘最多 300 次請求"
+            timestamp: "2025-07-01T10:30:00Z"
+      headers:
+        X-RateLimit-Limit:
+          description: 速率限制
+          schema:
+            type: integer
+            example: 300
+        X-RateLimit-Remaining:
+          description: 剩餘請求數
+          schema:
+            type: integer
+            example: 0
+        X-RateLimit-Reset:
+          description: 重置時間 (秒)
+          schema:
+            type: integer
+            example: 60
+        Retry-After:
+          description: 重試間隔 (秒)
+          schema:
+            type: integer
+            example: 60
+
+    InternalServerError:
+      description: 內部伺服器錯誤
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            error:
+              code: "INTERNAL_SERVER_ERROR"
+              message: "內部伺服器錯誤"
+              developer_message: "請聯繫系統管理員"
+            timestamp: "2025-07-01T10:30:00Z"
+
+tags:
+  - name: 系統
+    description: 系統基礎功能和健康檢查
+  - name: 指標查詢
+    description: 監控指標數據查詢
+  - name: 告警管理
+    description: 告警規則和通知管理
+  - name: 服務監控
+    description: 服務狀態和健康監控
+  - name: 儀表板
+    description: 儀表板數據和可視化支持 

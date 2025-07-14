@@ -1,0 +1,137 @@
+version: '3.8'
+
+services:
+  # RabbitMQ 服務 - 事件佇列
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: monitor-rabbitmq
+    ports:
+      - "5672:5672"     # AMQP port
+      - "15672:15672"   # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: monitor_user
+      RABBITMQ_DEFAULT_PASS: monitor_pass
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - monitoring_network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      timeout: 30s
+      interval: 30s
+      retries: 3
+
+  # PostgreSQL + TimescaleDB - 歷史數據存儲
+  postgres:
+    image: timescale/timescaledb:latest-pg15
+    container_name: monitor-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: monitoring_db
+      POSTGRES_USER: monitor_user
+      POSTGRES_PASSWORD: monitor_pass
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - monitoring_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U monitor_user -d monitoring_db"]
+      timeout: 5s
+      interval: 10s
+      retries: 5
+
+  # Redis - 即時數據快取
+  redis:
+    image: redis:7-alpine
+    container_name: monitor-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass monitor_pass
+    volumes:
+      - redis_data:/data
+    networks:
+      - monitoring_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 3s
+      interval: 10s
+      retries: 3
+
+  # pgAdmin - PostgreSQL 圖形化管理工具
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: monitor-pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@monitoring.com
+      PGADMIN_DEFAULT_PASSWORD: monitor_admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - monitoring_network
+    depends_on:
+      - postgres
+
+  # FastAPI 後端服務 (開發階段)
+  api_server:
+    build:
+      context: ./2_implementation
+      dockerfile: Dockerfile
+    container_name: monitor-api
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://monitor_user:monitor_pass@postgres:5432/monitoring_db
+      - REDIS_URL=redis://:monitor_pass@redis:6379
+      - RABBITMQ_URL=amqp://monitor_user:monitor_pass@rabbitmq:5672/
+      - API_KEY=monitor_api_key_dev_2025
+    volumes:
+      - ./2_implementation:/app
+    networks:
+      - monitoring_network
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    # 暫時註解，等 Dockerfile 建立後再啟用
+    # profiles:
+    #   - api
+
+  # 指標處理服務 (開發階段)
+  metrics_processor:
+    build:
+      context: ./2_implementation
+      dockerfile: Dockerfile.processor
+    container_name: monitor-processor
+    environment:
+      - DATABASE_URL=postgresql://monitor_user:monitor_pass@postgres:5432/monitoring_db
+      - REDIS_URL=redis://:monitor_pass@redis:6379
+      - RABBITMQ_URL=amqp://monitor_user:monitor_pass@rabbitmq:5672/
+    volumes:
+      - ./2_implementation:/app
+    networks:
+      - monitoring_network
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    # 暫時註解，等實作完成後再啟用
+    # profiles:
+    #   - processor
+
+# 數據卷
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  redis_data:
+  pgadmin_data:
+
+# 網路設定
+networks:
+  monitoring_network:
+    driver: bridge 
